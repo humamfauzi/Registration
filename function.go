@@ -20,9 +20,10 @@ import (
 )
 
 type Registration struct {
-  Name string `json: name`
-  Email string `json: email`
-  Phone string `json: phone`
+  Name     string `json: name`
+  Email    string `json: email`
+  Phone    string `json: phone`
+  Password string `json: password`
 }
 
 type Login struct {
@@ -56,7 +57,6 @@ func (cnu *CreateNewUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusNotFound)
   }
 
-  var password string
   var regis Registration
 
   err = json.Unmarshal(body, &regis)
@@ -66,41 +66,19 @@ func (cnu *CreateNewUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   }
 
   query := GetValue("./query.json", "CreateNewUser")
-  stmt, err := cnu.db.Prepare(query)
-  if err != nil {
-    log.Fatal(err)
-    w.WriteHeader(http.StatusNotFound)
-  }
-
-  rows, err := stmt.Exec(regis.Name, regis.Phone, regis.Email)
-  if err != nil {
-    log.Fatal(err)
-    w.WriteHeader(http.StatusBadRequest)
-  }
-
-  _, err = rows.LastInsertId()
+  err = DatabaseInsert(cnu.db, query, regis.Name, regis.Phone, regis.Email)
   if err != nil {
     log.Fatal(err)
     w.WriteHeader(http.StatusBadRequest)
   }
 
   query = GetValue("./query.json", "CreateNewPassword")
-  stmt, err = cnu.db.Prepare(query)
+  err = DatabaseInsert(cnu.db, query, regis.Email, regis.Email + ":" + regis.Password, cnu.aesCredentials)
   if err != nil {
     log.Fatal(err)
-    w.WriteHeader(http.StatusNotFound)
+    w.WriteHeader(http.StatusBadRequest)
   }
-
-  rows, err = stmt.Exec(regis.Email, regis.Email + ":" + password, cnu.aesCredentials)
-  if err != nil {
-    log.Fatal(err)
-    w.WriteHeader(http.StatusNotFound)
-  }
-
-  _, err = rows.LastInsertId()
-  if err != nil {
-    log.Fatal(err)
-  }
+  w.WriteHeader(http.StatusOK)
 }
 
 type LoginUser struct {
@@ -128,6 +106,10 @@ func (lu *LoginUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   cookieValue := hex.EncodeToString(cookieValue)
 
   cookie := Cookie{Name: login.Email, Value: cookieValue, Expires: expiration}
+  err = lu.SendCookieToDB(cookie)
+  if err != nil {
+    w.WriteHeader(http.StatusNotFound)
+  }
   http.setCookie(w, &cookie)
 
   query := GetValue("./query.json", "LoginCredentials")
@@ -140,7 +122,6 @@ func (lu *LoginUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusNotFound)
   case nil:
     w.WriteHeader(http.StatusOK)
-
   default:
     w.WriteHeader(http.StatusNotFound)
   }
@@ -154,7 +135,18 @@ func (lu *LoginUser) CookieValue(email string, expiration time.Time) []byte {
 
   hash := sha256.New()
   hash.Write(newToken)
+
   return hash.Sum(nil)
+}
+
+func (lu *LoginUser) SendCookieToDB(cookie Cookie) error {
+  query := GetValue("./query.json", "RegisterCookie")
+  err := DatabaseInsert(lu.db, query, cookie.Expires, cookie.Value, cookie.Name)
+  if err != nil {
+    log.Fatal(err)
+    return err
+  }
+  return nil
 }
 
 type ForgetPass struct {
@@ -216,21 +208,8 @@ func (fp *ForgetPass) CreateToken(email, name string) error {
 
   // Send to Database
   query := GetValue("./query.json", "CreateTokenForgetPass")
-  stmt, err := fp.db.Prepare(query)
+  err = DatabaseInsert(fp.db, query, email, timeString, token)
   if err != nil {
-    log.Fatal(err)
-    return err
-  }
-
-  rows, err := stmt.Exec(email, timeString, token)
-  if err != nil {
-    log.Fatal(err)
-    return err
-  }
-
-  _, err = rows.LastInsertId()
-  if err != nil {
-    log.Fatal(err)
     return err
   }
   return nil
@@ -315,43 +294,17 @@ func (pr *PasswordRecovery) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   }
 
   query := GetValue("./query.json", "UpdatePassword")
-
-  stmt, err := pr.db.Prepare(query)
+  err = DatabaseInsert(pr.db, query, profile.Email + ":" + profile.Password, pr.aesCredentials)
   if err != nil {
     log.Fatal(err)
     w.WriteHeader(http.StatusNotFound)
-  }
-
-  rows, err := stmt.Exec(profile.Email + ":" + profile.Password, pr.aesCredentials)
-  if err != nil {
-    log.Fatal(err)
-    w.WriteHeader(http.StatusNotFound)
-  }
-
-  _, err = rows.LastInsertId()
-  if err != nil {
-    log.Fatal("FATAL FETCHING INSERTED ID. ", err)
-    w.WriteHeader(http.StatusBadRequest)
   }
 
   query = GetValue("./query.json", "DeleteToken")
-
-  stmt, err = pr.db.Prepare(query)
+  err = DatabaseInsert(pr.db, query, profile.Email + ":" + profile.Password, pr.aesCredentials)
   if err != nil {
     log.Fatal(err)
     w.WriteHeader(http.StatusNotFound)
-  }
-
-  rows, err = stmt.Exec(profile.Email)
-  if err != nil {
-    log.Fatal(err)
-    w.WriteHeader(http.StatusNotFound)
-  }
-
-  _, err = rows.LastInsertId()
-  if err != nil {
-    log.Fatal(err)
-    w.WriteHeader(http.StatusBadRequest)
   }
 
   w.WriteHeader(http.StatusOK)

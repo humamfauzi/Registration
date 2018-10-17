@@ -2,6 +2,7 @@
   "CreateNewUser" : "INSERT INTO profile (name, phone, email) VALUE (?, ?, ?)",
   "CreateNewPassword" : "INSERT INTO pass (email, password) VALUE (?, AES_ENCRYPT(?, UNHEX(SHA2(?, 512))))",
   "LoginCredentials": "SELECT password FROM pass WHERE password = AES_ENCRYPT(?, UNHEX(SHA2(?, 512)))",
+  "RegisterCookie": "INSERT INTO cookie (expiration, cookie, email) VALUE (?, ?, ?)",
   "ForgetEmail": "SELECT email, name FROM profile WHERE email = ?",
   "CreateTokenForgetPass":"INSERT INTO token_list (date, token, email) VALUE (?, FROM_UNIXTIME(?), ?)",
   "VerifyEmail": "SELECT token, email FROM token_list WHERE token = ?",

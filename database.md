@@ -1,11 +1,5 @@
 # Deployment and Test
-We wrap all Go files to an exe or any executable. We deploy it in a containerized
-form. We also deploy database MySql 5.7 with container and an SMTP server for our mailing test.
-So in total, there are four container which is our main app, database, and a SMTP server and IMAP server.
-
-Our main app should be able to connect with database and SMTP server where we send mail.
-We still don't know how to orchestrate a connection. We did have some experience setting
-a containerized database but we did not have one for mail server. 
+Untested Database
 
 # Database Design Documentation
 
@@ -17,6 +11,7 @@ a containerized database but we did not have one for mail server.
     name VARCHAR(255) NOT NULL,
     phone VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL,
+    IS_TEST bool,
     PRIMARY KEY profile_id,
     UNIQUE KEY email
     )
@@ -27,6 +22,7 @@ a containerized database but we did not have one for mail server.
  CREATE TABLE IF NOT EXISTS pass (
    email VARCHAR(255) NOT NULL,
    password BLOB NOT NULL
+   IS_TEST bool,
    )
 ```
 
@@ -36,5 +32,16 @@ a containerized database but we did not have one for mail server.
     date DATETIME,
     token BLOB NOT NULL,
     email VARCHAR(255) NOT NULL
+    IS_TEST bool,
+    )
+```
+
+4. Cookie Table
+```
+  CREATE TABLE IF NOT EXISTS cookie (
+    expiration DATETIME,
+    cookie VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL
+    IS_TEST bool,
     )
 ```
