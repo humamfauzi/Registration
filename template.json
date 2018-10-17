@@ -1,0 +1,3 @@
+{
+  "ForgetPass": "Hi ${NAME}, \n You requested a new password, here is the link to recover your password \n ${LINK} \n\n Cheers,\nCompany Team"
+}
