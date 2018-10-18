@@ -31,20 +31,6 @@ type Login struct {
   Password string `json: password`
 }
 
-type Cookie struct {
-  Name       string
-  Value      string
-  Path       string
-  Domain     string
-  Expires    time.Time
-  RawExpires string
-  MaxAge     int
-  Secure     bool
-  Httponly   bool
-  Raw        string
-  Unparsed   []string
-}
-
 type CreateNewUser struct {
   db *sql.DB
   aesCredentials string
@@ -101,16 +87,16 @@ func (lu *LoginUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusNotFound)
   }
 
-  expiration := time.Now().add(30 * 24 * time.Hour)
-  cookieToken := lu.CookieValue(expiration, login.Email)
-  cookieValue := hex.EncodeToString(cookieValue)
+  expiration := time.Now().Add(30 * 24 * time.Hour)
+  cookieToken := lu.CookieValue(login.Email, expiration)
+  cookieValue := hex.EncodeToString(cookieToken)
 
-  cookie := Cookie{Name: login.Email, Value: cookieValue, Expires: expiration}
+  cookie := http.Cookie{Name: login.Email, Value: cookieValue, Expires: expiration}
   err = lu.SendCookieToDB(cookie)
   if err != nil {
     w.WriteHeader(http.StatusNotFound)
   }
-  http.setCookie(w, &cookie)
+  http.SetCookie(w, &cookie)
 
   query := GetValue("./query.json", "LoginCredentials")
   row := lu.db.QueryRow(query, login.Email + ":" + login.Password, lu.aesCredentials)
@@ -133,13 +119,13 @@ func (lu *LoginUser) CookieValue(email string, expiration time.Time) []byte {
 
   newToken := []byte(byteVersion + email)
 
-  hash := sha256.New()
+  hash := sha512.New()
   hash.Write(newToken)
 
   return hash.Sum(nil)
 }
 
-func (lu *LoginUser) SendCookieToDB(cookie Cookie) error {
+func (lu *LoginUser) SendCookieToDB(cookie http.Cookie) error {
   query := GetValue("./query.json", "RegisterCookie")
   err := DatabaseInsert(lu.db, query, cookie.Expires, cookie.Value, cookie.Name)
   if err != nil {

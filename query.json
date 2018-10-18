@@ -1,5 +1,5 @@
 {
-  "CreateNewUser" : "INSERT INTO profile (name, phone, email) VALUE (?, ?, ?)",
+  "CreateNewUser" : "INSERT INTO profile_table (profile_name, phone, email) VALUE (?, ?, ?)",
   "CreateNewPassword" : "INSERT INTO pass (email, password) VALUE (?, AES_ENCRYPT(?, UNHEX(SHA2(?, 512))))",
   "LoginCredentials": "SELECT password FROM pass WHERE password = AES_ENCRYPT(?, UNHEX(SHA2(?, 512)))",
   "RegisterCookie": "INSERT INTO cookie (expiration, cookie, email) VALUE (?, ?, ?)",

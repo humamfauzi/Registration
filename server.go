@@ -12,9 +12,6 @@ import (
 /*
   Basically what we want to achieve is basic internet Login Mechanism
   which widely applied throughout internet industries.
-
-  TODO: ADD COOKIE FEATURE FOR LOG IN MECHANISMS
-
 */
 func main() {
   router, err := NewRouter()
