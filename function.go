@@ -27,12 +27,12 @@ type Registration struct {
 }
 
 type Login struct {
-  Email string `json: email`
+  Email    string `json: email`
   Password string `json: password`
 }
 
 type CreateNewUser struct {
-  db *sql.DB
+  db             *sql.DB
   aesCredentials string
 }
 
@@ -68,7 +68,7 @@ func (cnu *CreateNewUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 type LoginUser struct {
-  db *sql.DB
+  db             *sql.DB
   aesCredentials string
 }
 
@@ -87,10 +87,14 @@ func (lu *LoginUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusNotFound)
   }
 
-  expiration := time.Now().Add(30 * 24 * time.Hour)
+  query := GetValue("./query.json", "LoginCredentials")
+  _, err = ReadQuery(lu.db, query, login.Email + ":" + login.Password, lu.aesCredentials)
+  if err != nil {
+    w.WriteHeader(http.StatusNotFound)
+  }
+  expiration :=  time.Now().Add(30 * 24 * time.Hour)
   cookieToken := lu.CookieValue(login.Email, expiration)
   cookieValue := hex.EncodeToString(cookieToken)
-
   cookie := http.Cookie{Name: login.Email, Value: cookieValue, Expires: expiration}
   err = lu.SendCookieToDB(cookie)
   if err != nil {
@@ -98,20 +102,7 @@ func (lu *LoginUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   }
   http.SetCookie(w, &cookie)
 
-  query := GetValue("./query.json", "LoginCredentials")
-  row := lu.db.QueryRow(query, login.Email + ":" + login.Password, lu.aesCredentials)
 
-  var pswdBlob []byte
-
-  switch err := row.Scan(&pswdBlob); err {
-  case sql.ErrNoRows:
-    w.WriteHeader(http.StatusNotFound)
-  case nil:
-    w.WriteHeader(http.StatusOK)
-  default:
-    w.WriteHeader(http.StatusNotFound)
-  }
-  w.WriteHeader(http.StatusNotFound)
 }
 
 func (lu *LoginUser) CookieValue(email string, expiration time.Time) []byte {
@@ -155,25 +146,16 @@ func (fp *ForgetPass) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   }
 
   query := GetValue("./query.json", "ForgetEmail")
-  row := fp.db.QueryRow(query, email)
-
-  var name string
-
-  switch err := row.Scan(&email, &name); err {
-  case sql.ErrNoRows:
-    w.WriteHeader(http.StatusNotFound)
-  case nil:
-
-    err := fp.CreateToken(email, name)
-    if err != nil {
-      log.Fatal(err)
-      w.WriteHeader(http.StatusNotFound)
-    }
-
-  default:
+  result, err := ReadQuery(fp.db, query, email)
+  if err != nil {
     w.WriteHeader(http.StatusNotFound)
   }
-  w.WriteHeader(http.StatusNotFound)
+  result = result[0].([]interface{})
+  err = fp.CreateToken(result[0].(string), result[1].(string))
+  if err != nil {
+    log.Fatal(err)
+    w.WriteHeader(http.StatusNotFound)
+  }
 }
 
 func (fp *ForgetPass) CreateToken(email, name string) error {
@@ -241,24 +223,17 @@ func (vt *VerifyToken) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   }
 
   query := GetValue("./query.json", "VerifyEmail")
-  row := vt.db.QueryRow(query, queryString["token"])
-
-  var token []byte
-  var email string
-
-  switch err := row.Scan(&token, &email); err {
-  case sql.ErrNoRows:
+  _, err = ReadQuery(vt.db, query, queryString["email"])
+  if err != nil {
     w.WriteHeader(http.StatusNotFound)
-  case nil:
+  } else {
     w.WriteHeader(http.StatusOK)
-  default:
-    w.WriteHeader(http.StatusNotFound)
   }
-  w.WriteHeader(http.StatusNotFound)
+
 }
 
 type PasswordRecovery struct {
-  db *sql.DB
+  db             *sql.DB
   aesCredentials string
 }
 
@@ -292,6 +267,5 @@ func (pr *PasswordRecovery) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     log.Fatal(err)
     w.WriteHeader(http.StatusNotFound)
   }
-
   w.WriteHeader(http.StatusOK)
 }

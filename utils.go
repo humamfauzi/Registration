@@ -54,3 +54,21 @@ func DatabaseInsert(db *sql.DB, query string, input ...interface{}) error {
   }
   return nil
 }
+
+func ReadQuery(db *sql.DB, query string, input ...interface{}) ([]interface{}, error) {
+  rows, _ := db.Query(query, input...)
+  columns, _ := rows.Columns()
+  count := len(columns)
+
+  val := make([]interface{}, count)
+  valPtrs := make([]interface{}, count)
+
+  for rows.Next() {
+    for i, _ := range columns {
+      valPtrs[i] = &val[i]
+    }
+    rows.Scan(valPtrs...)
+    return val, nil
+  }
+  return nil, nil
+}
