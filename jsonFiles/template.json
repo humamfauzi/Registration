@@ -1,0 +1,4 @@
+{
+  "ForgetPass": "Hi ${NAME}, \n You requested a new password, here is the link to recover your password \n ${LINK} \n\n Cheers,\nCompany Team"
+  "ForgetPass": "Hi ${NAME}, \n Thank you for registering with us, Please click this link ${LINK} to verify this email and start using our service \n\n Cheers,\nCompany Team"
+}

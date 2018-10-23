@@ -51,20 +51,66 @@ func (cnu *CreateNewUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusBadRequest)
   }
 
-  query := GetValue("./query.json", "CreateNewUser")
+  query := GetValue("./jsonFiles/query.json", "CreateNewUser")
   err = DatabaseInsert(cnu.db, query, regis.Name, regis.Phone, regis.Email)
   if err != nil {
     log.Fatal(err)
     w.WriteHeader(http.StatusBadRequest)
   }
 
-  query = GetValue("./query.json", "CreateNewPassword")
+  query = GetValue("./jsonFiles/query.json", "CreateNewPassword")
   err = DatabaseInsert(cnu.db, query, regis.Email, regis.Email + ":" + regis.Password, cnu.aesCredentials)
   if err != nil {
     log.Fatal(err)
     w.WriteHeader(http.StatusBadRequest)
   }
   w.WriteHeader(http.StatusOK)
+
+  if err := SendEmail(regis.Email, regis.Name, ); err != nil {
+
+  }
+}
+
+func (cnu *CreateNewUser) SendEmail(email, name string, token []byte) error {
+  host, addr, pass, port := GetValueEmail("./config.json", "noreply")
+  auth := smtp.PlainAuth("", addr, pass, host)
+
+  // Email Link should contain the email and token for later parsing
+  template := GetValue("./jsonFiles/template.json", "VerifyUser")
+
+  link, _ := url.Parse("https://localhost:8080/VerifyUser?")
+  q := link.Query()
+  q.Set("Token", hex.EncodeToString(token)) // Change First from HEX to String
+  link.RawQuery = q.Encode()
+
+  msg := []byte(fp.ComposeMessage(template, name, link.String()))
+
+  err := smtp.SendMail(host + ":" + port, auth, addr, []string{email}, msg)
+  if err != nil {
+    log.Fatal(err)
+    return err
+  }
+  return nil
+}
+
+type VerifyUser struct {
+  db *sql.DB
+}
+
+func(vu *VerifyUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+  queryString, err := url.ParseQuery(r.URL.RawQuery)
+  if err != nil {
+    log.Fatal("FAILED TO PARSE QUERY STRING:", err)
+    w.WriteHeader(http.StatusBadRequest)
+  }
+
+  query := GetValue("./jsonFiles/query.json", "VerifyUser")
+  _, err = ReadQuery(vu.db, query, queryString["token"])
+  if err != nil {
+    w.WriteHeader(http.StatusNotFound)
+  } else {
+    w.WriteHeader(http.StatusOK)
+  }
 }
 
 type LoginUser struct {
@@ -87,7 +133,7 @@ func (lu *LoginUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusNotFound)
   }
 
-  query := GetValue("./query.json", "LoginCredentials")
+  query := GetValue("./jsonFiles/query.json", "LoginCredentials")
   _, err = ReadQuery(lu.db, query, login.Email + ":" + login.Password, lu.aesCredentials)
   if err != nil {
     w.WriteHeader(http.StatusNotFound)
@@ -101,8 +147,6 @@ func (lu *LoginUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusNotFound)
   }
   http.SetCookie(w, &cookie)
-
-
 }
 
 func (lu *LoginUser) CookieValue(email string, expiration time.Time) []byte {
@@ -117,7 +161,7 @@ func (lu *LoginUser) CookieValue(email string, expiration time.Time) []byte {
 }
 
 func (lu *LoginUser) SendCookieToDB(cookie http.Cookie) error {
-  query := GetValue("./query.json", "RegisterCookie")
+  query := GetValue("./jsonFiles/query.json", "RegisterCookie")
   err := DatabaseInsert(lu.db, query, cookie.Expires, cookie.Value, cookie.Name)
   if err != nil {
     log.Fatal(err)
@@ -145,7 +189,7 @@ func (fp *ForgetPass) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusNotFound)
   }
 
-  query := GetValue("./query.json", "ForgetEmail")
+  query := GetValue("./jsonFiles/query.json", "ForgetEmail")
   result, err := ReadQuery(fp.db, query, email)
   if err != nil {
     w.WriteHeader(http.StatusNotFound)
@@ -175,7 +219,7 @@ func (fp *ForgetPass) CreateToken(email, name string) error {
   }
 
   // Send to Database
-  query := GetValue("./query.json", "CreateTokenForgetPass")
+  query := GetValue("./jsonFiles/query.json", "CreateTokenForgetPass")
   err = DatabaseInsert(fp.db, query, email, timeString, token)
   if err != nil {
     return err
@@ -184,11 +228,11 @@ func (fp *ForgetPass) CreateToken(email, name string) error {
 }
 
 func (fp *ForgetPass) SendEmail(email, name string, token []byte) error {
-  host, addr, pass, port := GetValueEmail("./config.json", "PassRecovery")
+  host, addr, pass, port := GetValueEmail("./config.json", "noreply")
   auth := smtp.PlainAuth("", addr, pass, host)
 
   // Email Link should contain the email and token for later parsing
-  template := GetValue("./template.json", "ForgetPass")
+  template := GetValue("./jsonFiles/template.json", "ForgetPass")
 
   link, _ := url.Parse("https://localhost:8080/VerifyToken?")
   q := link.Query()
@@ -222,7 +266,7 @@ func (vt *VerifyToken) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusBadRequest)
   }
 
-  query := GetValue("./query.json", "VerifyEmail")
+  query := GetValue("./jsonFiles/query.json", "VerifyEmail")
   _, err = ReadQuery(vt.db, query, queryString["email"])
   if err != nil {
     w.WriteHeader(http.StatusNotFound)
@@ -254,14 +298,14 @@ func (pr *PasswordRecovery) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusBadRequest)
   }
 
-  query := GetValue("./query.json", "UpdatePassword")
+  query := GetValue("./jsonFiles/query.json", "UpdatePassword")
   err = DatabaseInsert(pr.db, query, profile.Email + ":" + profile.Password, pr.aesCredentials)
   if err != nil {
     log.Fatal(err)
     w.WriteHeader(http.StatusNotFound)
   }
 
-  query = GetValue("./query.json", "DeleteToken")
+  query = GetValue("./jsonFiles/query.json", "DeleteToken")
   err = DatabaseInsert(pr.db, query, profile.Email + ":" + profile.Password, pr.aesCredentials)
   if err != nil {
     log.Fatal(err)

@@ -1,4 +1,3 @@
-try1.*
-*.sql
+try*.*
 *.exe
 *.js

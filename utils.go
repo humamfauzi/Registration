@@ -72,3 +72,5 @@ func ReadQuery(db *sql.DB, query string, input ...interface{}) ([]interface{}, e
   }
   return nil, nil
 }
+
+func CreateJWT
