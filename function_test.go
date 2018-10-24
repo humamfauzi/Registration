@@ -5,6 +5,7 @@ import (
   "net/http/httptest"
   "testing"
   "bytes"
+  "io/ioutil"
 
   "database/sql"
   _ "github.com/go-sql-driver/mysql"
@@ -31,6 +32,13 @@ type routeTest struct {
 
 func TestMain(t *testing.T) {
   //Implement
+
+  err := SummonDatabase()
+  if err != nil {
+    t.Errorf("Problem Creating Database", err)
+    return
+  }
+
   aes := GetValue("./jsonFiles/config.json", "AES")
   conn0, err := sql.Open("mysql", GetValue("./jsonFiles/config.json", "access0"))
   if err != nil {
@@ -68,6 +76,9 @@ func TestMain(t *testing.T) {
   for _, test := range tests {
     testRoute(t, test)
   }
+
+  conn0.Close()
+  return
 }
 
 func VerifyUserTest(t *testing.T) {
@@ -98,6 +109,45 @@ func PassRecoveryTest(t *testing.T) {
 // +--------------------------------------------------------+
 //                     FUNCTION HELPER
 // +--------------------------------------------------------+
+func SummonDatabase() error {
+  conn0, err := sql.Open("mysql","root:humam123@tcp(localhost:3306)/")
+  if err != nil {
+    log.Fatal(err)
+    return
+  }
+
+  _, err = conn0.Exec("CREATE DATABASE registration;")
+  if err != nil {
+    log.Fatal(err)
+    return
+  }
+
+  conn0.Close()
+
+  conn0, err = sql.Open("mysql", GetValue("./jsonFiles/config.json", "access0"))
+  if err != nil {
+    log.Fatal(err)
+    return err
+  }
+
+  query, err := ioutil.ReadFile("./db/migrations/tableCreation.sql")
+  if err != nil {
+    log.Fatal(err)
+    return err
+  }
+
+  splitQuery := strings.Split(string(query), "\n\n")
+  for _, v := range splitQuery {
+    _, err = conn0.Exec(v)
+    if err != nil {
+      log.Fatal(err)
+      return err
+    }
+  }
+
+  conn0.Close()
+  return nil
+}
 
 func testRoute(t *testing.T, test routeTest) {
   method := test.method
