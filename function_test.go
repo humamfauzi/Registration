@@ -3,9 +3,12 @@ package Registration
 import (
   "net/http"
   "net/http/httptest"
+
   "testing"
   "bytes"
   "io/ioutil"
+  "log"
+  "strings"
 
   "database/sql"
   _ "github.com/go-sql-driver/mysql"
@@ -35,7 +38,7 @@ func TestMain(t *testing.T) {
 
   err := SummonDatabase()
   if err != nil {
-    t.Errorf("Problem Creating Database", err)
+    t.Errorf("Problem Creating Database %v", err)
     return
   }
 
@@ -113,13 +116,13 @@ func SummonDatabase() error {
   conn0, err := sql.Open("mysql","root:humam123@tcp(localhost:3306)/")
   if err != nil {
     log.Fatal(err)
-    return
+    return err
   }
 
   _, err = conn0.Exec("CREATE DATABASE registration;")
   if err != nil {
     log.Fatal(err)
-    return
+    return err
   }
 
   conn0.Close()
