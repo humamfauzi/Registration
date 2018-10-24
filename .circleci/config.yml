@@ -18,5 +18,8 @@ jobs:
           name: Get Package
           command:  go get -v -t -d ./...
       - run:
+          name: Wait for db
+          command: dockerize -wait tcp://localhost:3306 -timeout 1m
+      - run:
           name: Test Go Files
           command: go test -v ./...
