@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS token_list (
     token_date DATETIME,
     token BLOB NOT NULL,
     email VARCHAR(255) NOT NULL,
-    usage VARCHAR(255) NOT NULL,
+    token_usage VARCHAR(255) NOT NULL,
     IS_TEST bool
     );
 

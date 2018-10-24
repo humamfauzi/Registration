@@ -3,6 +3,7 @@ jobs:
   build:
     docker:
       - image: circleci/golang:1.9
+      - image: circleci/mysql:5.7
 
     working_directory: /go/src/github.com/humamfauzi/Registration
     steps:

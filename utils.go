@@ -1,4 +1,4 @@
-package main
+package Registration
 
 import (
   "database/sql"
@@ -35,6 +35,8 @@ func GetValueEmail(directory, emailType string) (string, string, string, string)
 }
 
 func DatabaseInsert(db *sql.DB, query string, input ...interface{}) error {
+  input = inputFilter(input...)
+
   stmt, err := db.Prepare(query)
   if err != nil {
     log.Fatal(err)
@@ -73,4 +75,25 @@ func ReadQuery(db *sql.DB, query string, input ...interface{}) ([]interface{}, e
   return nil, nil
 }
 
-func CreateJWT
+func inputFilter(input ...interface{}) []interface{} {
+  for i := 0; i < len(input); i++ {
+    switch input[i].(type) {
+    case int:
+      if input[i] == 0 {
+        var ph sql.NullInt64
+        input[i] = ph
+      }
+    case float64:
+      if input[i] == 0 {
+        var ph sql.NullFloat64
+        input[i] = ph
+      }
+    case string:
+      if len(input[i].(string)) == 0{
+        var ph sql.NullString
+        input[i] = ph
+      }
+    }
+  }
+  return input
+}

@@ -1,4 +1,4 @@
-package main
+package Registration
 
 import (
   "net/http"
@@ -36,11 +36,12 @@ type CreateNewUser struct {
   aesCredentials string
 }
 
-func (cnu *CreateNewUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (cnu CreateNewUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   body, err := ioutil.ReadAll(r.Body)
   if err != nil {
     log.Fatal(err)
     w.WriteHeader(http.StatusNotFound)
+    return
   }
 
   var regis Registration
@@ -49,6 +50,7 @@ func (cnu *CreateNewUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   if err != nil {
     log.Fatal(err)
     w.WriteHeader(http.StatusBadRequest)
+    return
   }
 
   query := GetValue("./jsonFiles/query.json", "CreateNewUser")
@@ -56,6 +58,7 @@ func (cnu *CreateNewUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   if err != nil {
     log.Fatal(err)
     w.WriteHeader(http.StatusBadRequest)
+    return
   }
 
   query = GetValue("./jsonFiles/query.json", "CreateNewPassword")
@@ -63,15 +66,16 @@ func (cnu *CreateNewUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   if err != nil {
     log.Fatal(err)
     w.WriteHeader(http.StatusBadRequest)
+    return
   }
   w.WriteHeader(http.StatusOK)
-
-  if err := SendEmail(regis.Email, regis.Name, ); err != nil {
-
-  }
+  return
+  // if err := SendEmail(regis.Email, regis.Name, ); err != nil {
+  //
+  // }
 }
 
-func (cnu *CreateNewUser) SendEmail(email, name string, token []byte) error {
+func (cnu CreateNewUser) SendEmail(email, name string, token []byte) error {
   host, addr, pass, port := GetValueEmail("./config.json", "noreply")
   auth := smtp.PlainAuth("", addr, pass, host)
 
@@ -83,7 +87,7 @@ func (cnu *CreateNewUser) SendEmail(email, name string, token []byte) error {
   q.Set("Token", hex.EncodeToString(token)) // Change First from HEX to String
   link.RawQuery = q.Encode()
 
-  msg := []byte(fp.ComposeMessage(template, name, link.String()))
+  msg := []byte(cnu.ComposeMessage(template, name, link.String()))
 
   err := smtp.SendMail(host + ":" + port, auth, addr, []string{email}, msg)
   if err != nil {
@@ -91,6 +95,11 @@ func (cnu *CreateNewUser) SendEmail(email, name string, token []byte) error {
     return err
   }
   return nil
+}
+
+func (cnu CreateNewUser) ComposeMessage(template, name, link string) string {
+  r := strings.NewReplacer("${LINK}", link, "${NAME}", name)
+  return r.Replace(template)
 }
 
 type VerifyUser struct {
