@@ -7,7 +7,8 @@ jobs:
         environment:
           MYSQL_ROOT_PASSWORD: humam123
           MYSQL_DATABASE: registration
-          MYSQL_PORT: 3306
+        ports:
+          - 3306:3306
 
     working_directory: /go/src/github.com/humamfauzi/Registration
     steps:
