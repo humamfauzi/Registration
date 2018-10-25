@@ -119,7 +119,7 @@ func SummonDatabase() error {
     return err
   }
 
-  _, err = conn0.Exec("CREATE DATABASE registration;")
+  _, err = conn0.Exec("CREATE DATABASE IF NOT EXISTS registration;")
   if err != nil {
     log.Fatal(err)
     return err
