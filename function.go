@@ -39,7 +39,6 @@ type CreateNewUser struct {
 func (cnu CreateNewUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   body, err := ioutil.ReadAll(r.Body)
   if err != nil {
-    log.Fatal(err)
     w.WriteHeader(http.StatusNotFound)
     return
   }
@@ -48,7 +47,6 @@ func (cnu CreateNewUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
   err = json.Unmarshal(body, &regis)
   if err != nil {
-    log.Fatal(err)
     w.WriteHeader(http.StatusBadRequest)
     return
   }
@@ -56,7 +54,6 @@ func (cnu CreateNewUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   query := GetValue("./jsonFiles/query.json", "CreateNewUser")
   err = DatabaseInsert(cnu.db, query, regis.Name, regis.Phone, regis.Email)
   if err != nil {
-    log.Fatal(err)
     w.WriteHeader(http.StatusBadRequest)
     return
   }
@@ -64,7 +61,6 @@ func (cnu CreateNewUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   query = GetValue("./jsonFiles/query.json", "CreateNewPassword")
   err = DatabaseInsert(cnu.db, query, regis.Email, regis.Email + ":" + regis.Password, cnu.aesCredentials)
   if err != nil {
-    log.Fatal(err)
     w.WriteHeader(http.StatusBadRequest)
     return
   }
@@ -111,15 +107,19 @@ func(vu *VerifyUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   if err != nil {
     log.Fatal("FAILED TO PARSE QUERY STRING:", err)
     w.WriteHeader(http.StatusBadRequest)
+    return
   }
 
   query := GetValue("./jsonFiles/query.json", "VerifyUser")
   _, err = ReadQuery(vu.db, query, queryString["token"])
   if err != nil {
     w.WriteHeader(http.StatusNotFound)
+    return
   } else {
     w.WriteHeader(http.StatusOK)
+    return
   }
+  return
 }
 
 type LoginUser struct {
@@ -132,6 +132,7 @@ func (lu *LoginUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   if err != nil {
     log.Fatal(err)
     w.WriteHeader(http.StatusNotFound)
+    return
   }
 
   var login Login
@@ -140,12 +141,14 @@ func (lu *LoginUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   if err != nil {
     log.Fatal(err)
     w.WriteHeader(http.StatusNotFound)
+    return
   }
 
   query := GetValue("./jsonFiles/query.json", "LoginCredentials")
   _, err = ReadQuery(lu.db, query, login.Email + ":" + login.Password, lu.aesCredentials)
   if err != nil {
     w.WriteHeader(http.StatusNotFound)
+    return
   }
   expiration :=  time.Now().Add(30 * 24 * time.Hour)
   cookieToken := lu.CookieValue(login.Email, expiration)
@@ -154,6 +157,7 @@ func (lu *LoginUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   err = lu.SendCookieToDB(cookie)
   if err != nil {
     w.WriteHeader(http.StatusNotFound)
+    return
   }
   http.SetCookie(w, &cookie)
 }
@@ -188,6 +192,7 @@ func (fp *ForgetPass) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   if err != nil {
     log.Fatal(err)
     w.WriteHeader(http.StatusNotFound)
+    return
   }
 
   var email string
@@ -196,18 +201,21 @@ func (fp *ForgetPass) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   if err != nil {
     log.Fatal(err)
     w.WriteHeader(http.StatusNotFound)
+    return
   }
 
   query := GetValue("./jsonFiles/query.json", "ForgetEmail")
   result, err := ReadQuery(fp.db, query, email)
   if err != nil {
     w.WriteHeader(http.StatusNotFound)
+    return
   }
   result = result[0].([]interface{})
   err = fp.CreateToken(result[0].(string), result[1].(string))
   if err != nil {
     log.Fatal(err)
     w.WriteHeader(http.StatusNotFound)
+    return
   }
 }
 
@@ -273,14 +281,17 @@ func (vt *VerifyToken) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   if err != nil {
     log.Fatal("FAILED TO PARSE QUERY STRING:", err)
     w.WriteHeader(http.StatusBadRequest)
+    return
   }
 
   query := GetValue("./jsonFiles/query.json", "VerifyEmail")
   _, err = ReadQuery(vt.db, query, queryString["email"])
   if err != nil {
     w.WriteHeader(http.StatusNotFound)
+    return
   } else {
     w.WriteHeader(http.StatusOK)
+    return
   }
 
 }
@@ -298,6 +309,7 @@ func (pr *PasswordRecovery) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   body, err := ioutil.ReadAll(r.Body)
   if err != nil {
     w.WriteHeader(http.StatusBadRequest)
+    return
   }
 
   var profile Login
@@ -305,6 +317,7 @@ func (pr *PasswordRecovery) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   err = json.Unmarshal(body, &profile)
   if err != nil {
     w.WriteHeader(http.StatusBadRequest)
+    return
   }
 
   query := GetValue("./jsonFiles/query.json", "UpdatePassword")
@@ -312,6 +325,7 @@ func (pr *PasswordRecovery) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   if err != nil {
     log.Fatal(err)
     w.WriteHeader(http.StatusNotFound)
+    return
   }
 
   query = GetValue("./jsonFiles/query.json", "DeleteToken")
@@ -319,6 +333,8 @@ func (pr *PasswordRecovery) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   if err != nil {
     log.Fatal(err)
     w.WriteHeader(http.StatusNotFound)
+    return
   }
   w.WriteHeader(http.StatusOK)
+  return
 }

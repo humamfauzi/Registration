@@ -6,7 +6,6 @@ import (
 
   "encoding/json"
   "io/ioutil"
-  "log"
 )
 
 type Dictionary map[string]string
@@ -39,19 +38,16 @@ func DatabaseInsert(db *sql.DB, query string, input ...interface{}) error {
 
   stmt, err := db.Prepare(query)
   if err != nil {
-    log.Fatal(err)
     return err
   }
 
   rows, err := stmt.Exec(input...)
   if err != nil {
-    log.Fatal(err)
     return err
   }
 
   _, err = rows.LastInsertId()
   if err != nil {
-    log.Fatal(err)
     return err
   }
   return nil
