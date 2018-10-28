@@ -157,7 +157,7 @@ func (lu *LoginUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     return
   }
 
-  cookie := http.Cookie{Name: login.Email, Value: cookieValue, Expires: time.Now().Add(time.Minute * 1).Unix()}
+  cookie := http.Cookie{Name: login.Email, Value: cookieValue, Expires: time.Now().Add(time.Minute * 1)}
   http.SetCookie(w, &cookie)
 }
 

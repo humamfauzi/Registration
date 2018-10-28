@@ -10,7 +10,6 @@ import (
 
   "log"
   "time"
-  "os"
 
   jwt "github.com/dgrijalva/jwt-go"
 )
@@ -78,7 +77,7 @@ func TokenSigning(user, accessLevel string) (string, error){
 }
 
 func TokenParsing(tokenCookie string) (*jwt.Token, error) {
-  token, err := jwt.Parse(tokenCookie.Value, func(token *jwt.Token) (interface{}, error) {
+  token, err := jwt.Parse(tokenCookie, func(token *jwt.Token) (interface{}, error) {
     return verifyKey, nil
   })
   if err != nil{
