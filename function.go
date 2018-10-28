@@ -157,12 +157,7 @@ func (lu *LoginUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     return
   }
 
-  cookie := http.Cookie{Name: login.Email, Value: cookieValue, Expires: expiration}
-  err = lu.SendCookieToDB(cookie)
-  if err != nil {
-    w.WriteHeader(http.StatusNotFound)
-    return
-  }
+  cookie := http.Cookie{Name: login.Email, Value: cookieValue, Expires: time.Now().Add(time.Minute * 1).Unix()}
   http.SetCookie(w, &cookie)
 }
 

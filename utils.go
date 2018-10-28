@@ -7,6 +7,9 @@ import (
 
   "encoding/json"
   "io/ioutil"
+
+  "log"
+  "time"
   "os"
 
   jwt "github.com/dgrijalva/jwt-go"
@@ -74,14 +77,14 @@ func TokenSigning(user, accessLevel string) (string, error){
   return tokenString, nil
 }
 
-func TokenParsing(tokenCookie string) error {
+func TokenParsing(tokenCookie string) (*jwt.Token, error) {
   token, err := jwt.Parse(tokenCookie.Value, func(token *jwt.Token) (interface{}, error) {
     return verifyKey, nil
   })
   if err != nil{
-    return err
+    return token, err
   }
-  return token
+  return token, nil
 }
 
 type Dictionary map[string]string
