@@ -1,14 +1,93 @@
 package Registration
 
 import (
+  "crypto/rsa"
   "database/sql"
   _ "github.com/go-sql-driver/mysql"
 
   "encoding/json"
   "io/ioutil"
+  "os"
+
+  jwt "github.com/dgrijalva/jwt-go"
 )
 
+// JSON Web Token Support
+// HMAC  -- HS256 HS384 HS512 --> []byte for signing and validation
+// RSA   -- RS256 RS384 RS512 --> *rsa.PrivateKey for signing and *rsa.PublicKey for Validation
+// ECDSA -- ES256 ES384 ES512 --> *ecdsa.PrivateKey for signing and *ecdsa.PublicKey for Validation
+
+// If a utils function grows large, there will be division within utils function
+
+const (
+  privateKeyPath = "pairkeys/app.rsa"
+  publicKeyPath  = "pairkeys/app.rsa.pub"
+)
+
+var (
+  verifyKey *rsa.PublicKey
+  signKey   *rsa.PrivateKey
+)
+
+func init() {
+  // initialize RSA key pair
+  signBytes, err := ioutil.ReadFile(privateKeyPath)
+  if err != nil {
+    log.Fatal(err)
+  }
+
+  signKey, err = jwt.ParseRSAPrivateKeyFromPEM(signBytes)
+  if err != nil {
+    log.Fatal(err)
+  }
+
+  verifyBytes, err := ioutil.ReadFile(publicKeyPath)
+  if err != nil {
+    log.Fatal(err)
+  }
+
+  verifyKey, err = jwt.ParseRSAPublicKeyFromPEM(verifyBytes)
+  if err != nil {
+    log.Fatal(err)
+  }
+}
+
+// -------------------------TOKEN SECTION-------------------------------------
+
+func TokenSigning(user, accessLevel string) (string, error){
+  t := jwt.New(jwt.GetSigningMethod("RS256"))
+
+  claimsDict := jwt.MapClaims{}
+  claimsDict["AccesToken"] = accessLevel
+  claimsDict["CustomUserInfo"] = struct {
+    Name string
+    Kind string
+  }{user, "human"}
+  claimsDict["exp"] = time.Now().Add(time.Minute * 1).Unix()
+  t.Claims = claimsDict
+
+  tokenString, err := t.SignedString(signKey)
+  if err != nil {
+    return tokenString, err
+  }
+
+  return tokenString, nil
+}
+
+func TokenParsing(tokenCookie string) error {
+  token, err := jwt.Parse(tokenCookie.Value, func(token *jwt.Token) (interface{}, error) {
+    return verifyKey, nil
+  })
+  if err != nil{
+    return err
+  }
+  return token
+}
+
 type Dictionary map[string]string
+
+
+// -------------------------------FETCHING VALUE----------------------------------
 
 func GetValue(directory string, key string) string {
   body, _ := ioutil.ReadFile(directory)
@@ -32,6 +111,9 @@ func GetValueEmail(directory, emailType string) (string, string, string, string)
 
   return host, addr, pass, port
 }
+
+
+// -----------------------------DATABASE SECTION------------------------------
 
 func DatabaseInsert(db *sql.DB, query string, input ...interface{}) error {
   input = inputFilter(input...)

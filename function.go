@@ -150,9 +150,13 @@ func (lu *LoginUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusNotFound)
     return
   }
-  expiration :=  time.Now().Add(30 * 24 * time.Hour)
-  cookieToken := lu.CookieValue(login.Email, expiration)
-  cookieValue := hex.EncodeToString(cookieToken)
+
+  cookieValue, err := TokenSigning(login.Email, "UserLogin")
+  if err != nil {
+    w.WriteHeader(http.StatusInternalServerError)
+    return
+  }
+
   cookie := http.Cookie{Name: login.Email, Value: cookieValue, Expires: expiration}
   err = lu.SendCookieToDB(cookie)
   if err != nil {
@@ -162,27 +166,6 @@ func (lu *LoginUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   http.SetCookie(w, &cookie)
 }
 
-func (lu *LoginUser) CookieValue(email string, expiration time.Time) []byte {
-  byteVersion := string(expiration.UnixNano())
-
-  newToken := []byte(byteVersion + email)
-
-  hash := sha512.New()
-  hash.Write(newToken)
-
-  return hash.Sum(nil)
-}
-
-func (lu *LoginUser) SendCookieToDB(cookie http.Cookie) error {
-  query := GetValue("./jsonFiles/query.json", "RegisterCookie")
-  err := DatabaseInsert(lu.db, query, cookie.Expires, cookie.Value, cookie.Name)
-  if err != nil {
-    log.Fatal(err)
-    return err
-  }
-  return nil
-}
-
 type ForgetPass struct {
   db *sql.DB
 }
@@ -190,7 +173,6 @@ type ForgetPass struct {
 func (fp *ForgetPass) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   body, err := ioutil.ReadAll(r.Body)
   if err != nil {
-    log.Fatal(err)
     w.WriteHeader(http.StatusNotFound)
     return
   }
@@ -199,7 +181,6 @@ func (fp *ForgetPass) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
   err = json.Unmarshal(body, &email)
   if err != nil {
-    log.Fatal(err)
     w.WriteHeader(http.StatusNotFound)
     return
   }
@@ -213,7 +194,6 @@ func (fp *ForgetPass) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   result = result[0].([]interface{})
   err = fp.CreateToken(result[0].(string), result[1].(string))
   if err != nil {
-    log.Fatal(err)
     w.WriteHeader(http.StatusNotFound)
     return
   }
@@ -260,7 +240,6 @@ func (fp *ForgetPass) SendEmail(email, name string, token []byte) error {
 
   err := smtp.SendMail(host + ":" + port, auth, addr, []string{email}, msg)
   if err != nil {
-    log.Fatal(err)
     return err
   }
   return nil
@@ -323,7 +302,6 @@ func (pr *PasswordRecovery) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   query := GetValue("./jsonFiles/query.json", "UpdatePassword")
   err = DatabaseInsert(pr.db, query, profile.Email + ":" + profile.Password, pr.aesCredentials)
   if err != nil {
-    log.Fatal(err)
     w.WriteHeader(http.StatusNotFound)
     return
   }
@@ -331,7 +309,6 @@ func (pr *PasswordRecovery) ServeHTTP(w http.ResponseWriter, r *http.Request) {
   query = GetValue("./jsonFiles/query.json", "DeleteToken")
   err = DatabaseInsert(pr.db, query, profile.Email + ":" + profile.Password, pr.aesCredentials)
   if err != nil {
-    log.Fatal(err)
     w.WriteHeader(http.StatusNotFound)
     return
   }

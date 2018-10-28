@@ -6,7 +6,7 @@ import (
 
   "testing"
   "bytes"
-  "io/ioutil"  
+  "io/ioutil"
   "strings"
 
   "database/sql"
@@ -22,12 +22,8 @@ type routeTest struct {
   method      string
   handler     http.Handler
   shouldMatch bool
-  // vars map[string]string
-  // scheme string
-  // host string
-  // path string
-  // query string
 }
+
 // +-------------------------------------------------+
 //                 TESTING SEQUENCE
 // +-------------------------------------------------+
